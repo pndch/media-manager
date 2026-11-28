@@ -1,40 +1,35 @@
 import database as db
+import folder as fd
+import os
 
 def select_media():
-    print('By what you want select')
-    print("""
-        1. Artist
-        2. Character
-        3. Tag
-        """)
-    
-    answer = input()
-    match answer:
-        case '1':
-            print('Type artist name below')
-            artist = input()
-            paths = db.select_media(artist=artist)
-        case '2':
-            print('Type character name below')
-            character = input()
-            paths = db.select_media(character=character)
-        case '3':
-            print('Type tag below')
-            tag = input()
-            paths = db.select_media(tag=tag)
+    print('Type artist or just press Enter')
+    artist = input()
+    print('Type characters divided by , without Spaces or just press Enter')
+    characters = input()
+    print('Type tags divided by , without Spaces or just press Enter')
+    tags = input()
+
+    if artist == '': artist = None
+    if characters == '': characters = None
+    if tags == '': tags = None
+
+    names = db.select_media(characters, artist, tags)
+    fd.move_in_folder(names)
+
+    print('\nWhen you finish press Enter')
+    input()
+    fd.move_out_folder(names)
 
 def add_media():
-    path = ""
+    name = ""
     artist = ""
     characters = ""
     tags = ""
 
-    while path == "":
-        print('Type path below: ')
-        path = input()
-    else:
-        print('Path is empty, type again')
-        # добавить проверку на правильность пути
+    while name == "":
+        print('Type file name below: ')
+        name = input()
     
     print('Type artist name below: ')
     artist = input()
@@ -50,7 +45,7 @@ def add_media():
     if characters == "":
         characters = None
 
-    db.add_media(path, characters, artist, tags)
+    db.add_media(name, characters, artist, tags)
 
 def add_tag():
     print('Type tag below: ')
@@ -63,7 +58,6 @@ def add_artist():
 def add_character():
     print('Type character name below: ')
     db.add_character(input())
-    
 
 def main():
     print('What you want to do: ')
@@ -94,6 +88,8 @@ def main():
             db.create_database()
         case '6':
             db.delete_database()
+        # case '7':
+        #     set_folder()
 
 while True:
     main()

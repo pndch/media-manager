@@ -1,9 +1,10 @@
 from contextlib import closing
 import sqlite3
-import os
 from pathlib import Path
+import os
 
-DB_PATH = "app.db"
+DB_PATH = r"E:\folder\app.db"
+UPDATE_TYPES = ['add tag', 'delete tag', 'add character', 'delete character', 'add artist', 'rename']
 
 def create_database():
     with closing(sqlite3.connect(DB_PATH)) as conn:
@@ -32,7 +33,7 @@ def create_database():
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS media (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                path VARCHAR(300) NOT NULL,
+                name VARCHAR(300) NOT NULL,
                 artist_id INTEGER REFERENCES artists(id)
                 );                            
             """)
@@ -162,7 +163,7 @@ def add_tag(tag: str, conn: sqlite3.Connection = None):
 def add_artist(artist: str, conn: sqlite3.Connection = None):
     _add_meta("artists", artist, conn)
 
-def add_media(path:str, chars:str = None, artist: str = None, tags:str = None):
+def add_media(name:str, chars:str = None, artist: str = None, tags:str = None):
     if artist == None:
         artist = "artist_request"
     if chars == None:
@@ -178,11 +179,11 @@ def add_media(path:str, chars:str = None, artist: str = None, tags:str = None):
         with conn:
             #проверка добавлено ли медиа уже
             cur = conn.execute(
-                "SELECT id FROM media WHERE path = ?",
-                (path,),
+                "SELECT id FROM media WHERE name = ?",
+                (name,),
             )
             if cur.fetchone() is not None:
-                print("media с таким path уже добавлен в базу")
+                print("media с таким name уже добавлен в базу")
                 return
 
             #получение списка id
@@ -191,13 +192,13 @@ def add_media(path:str, chars:str = None, artist: str = None, tags:str = None):
             tag_ids = _get_meta_ids("tags", tags, conn)
 
             conn.execute(
-                "INSERT INTO media (path, artist_id) VALUES (?, ?)",
-                (path, artist_id,),
+                "INSERT INTO media (name, artist_id) VALUES (?, ?)",
+                (name, artist_id,),
             )
 
             media_id = conn.execute(
-                "SELECT id FROM media WHERE path = ?",
-                (path, ),
+                "SELECT id FROM media WHERE name = ?",
+                (name, ),
             ).fetchone()[0]
 
             for char_id in char_ids:
@@ -267,20 +268,24 @@ def select_media(chars:str = None, artist: str = None, tags:str = None) -> list:
     
     with closing(sqlite3.connect(DB_PATH)) as conn:
         with conn:
-            row = conn.execute(f"""
-                SELECT path FROM media m
+            rows = conn.execute(f"""
+                SELECT m.name FROM media m
                 INNER JOIN tags_media tm on m.id = tm.media_id
                 INNER JOIN tags t on tm.tag_id = t.id
                 INNER JOIN char_media cm on m.id = cm.media_id
                 INNER JOIN characters c on cm.char_id = c.id
                 INNER JOIN artists a ON a.id = m.artist_id
                 WHERE {where_placeholder}
-                GROUP BY m.id, m.path
+                GROUP BY m.id, m.name
                 HAVING {having_placeholder}
                 """,
                 sql_param,
-            )
-        return (row.fetchall())
+            ).fetchall()
+
+    clean_rows = []
+    for row in rows:
+        clean_rows.append(row[0])
+    return (clean_rows)
 
     
 
@@ -289,20 +294,17 @@ def select_media(chars:str = None, artist: str = None, tags:str = None) -> list:
     # chars_count = len(chars)
     
     # добавить проверку на то существуют ли указанные теги и тд
-
-    
-
-# def update_media(path:str, conn: sqlite3.Connection = None):
-#     connFlag = False
-#     if conn == None:
-#         conn = sqlite3.connect(DB_PATH)
-#         connFlag = True
-
-#     with conn:
-#         conn.execute(
-#             "UPDATE media SET "
-#         )
-
-#     if connFlag == True:
-#         conn.close()
  
+def update_media(name: str, update_type: str, update_data: str):
+    
+    if update_type not in UPDATE_TYPES:
+        return 
+    
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            media_id = conn.execute(
+                "SELECT id FROM media WHERE name = ?",
+                (name,),
+            ).fetchall()[0]
+
+            
